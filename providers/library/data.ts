@@ -112,11 +112,22 @@ export async function loadLibrary(
   }
 }
 
-// Clean, minimalist poster fallback (plain dark card with the title).
+// Minimal poster fallback: soft pastel card with the title, colour picked per title.
+const SOFT = [
+  ["F6E6E4", "7A5C58"], // blush
+  ["E4EEF6", "56697A"], // mist blue
+  ["E6F2E8", "5A7560"], // sage
+  ["F3EDE0", "7A6E55"], // sand
+  ["ECE6F4", "69587A"], // lavender
+  ["F6EBDD", "7A6350"], // peach
+];
 export function posterFor(item: LibItem): string {
   if (item.poster) return item.poster;
+  let h = 0;
+  for (const c of item.title) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+  const [bg, fg] = SOFT[h % SOFT.length];
   const t = encodeURIComponent(item.title);
-  return `https://placehold.co/400x600/111111/eeeeee/png?text=${t}`;
+  return `https://placehold.co/400x600/${bg}/${fg}/png?text=${t}`;
 }
 
 export function detectType(url: string): string {
