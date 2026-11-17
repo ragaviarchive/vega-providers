@@ -81,7 +81,7 @@ export const SAMPLE_LIBRARY: Library = {
 // ---------- Loading with offline cache ----------
 const CACHE_KEY = "library_cache";
 
-export async function loadLibrary(
+async function loadBase(
   providerContext: ProviderContext,
   signal?: AbortSignal
 ): Promise<Library> {
@@ -132,4 +132,76 @@ export function posterFor(item: LibItem): string {
 
 export function detectType(url: string): string {
   return /\.m3u8(\?|$)/i.test(url) ? "m3u8" : "mp4";
+}
+
+// ---------- Real artwork + synopsis from TMDB (needs a free API key) ----------
+const TMDB_CACHE = "tmdb_cache";
+const IMG = "https://image.tmdb.org/t/p/w500";
+
+export async function loadLibrary(
+  providerContext: ProviderContext,
+  signal?: AbortSignal
+): Promise<Library> {
+  const lib = await loadBase(providerContext, signal);
+  try {
+    return await enrich(lib, providerContext, signal);
+  } catch {
+    return lib;
+  }
+}
+
+async function enrich(
+  lib: Library,
+  providerContext: ProviderContext,
+  signal?: AbortSignal
+): Promise<Library> {
+  const { axios, kvStore } = providerContext as any;
+  const key = ((await kvStore.get("tmdbKey")) || "").trim();
+  if (!key) return lib;
+
+  let cache: Record<string, { poster?: string; overview?: string; imdbId?: string } | null> = {};
+  try {
+    cache = JSON.parse((await kvStore.get(TMDB_CACHE)) || "{}");
+  } catch {}
+
+  const todo = lib.items.filter((i) => !i.poster && cache[i.id] === undefined).slice(0, 40);
+  for (let n = 0; n < todo.length; n += 8) {
+    await Promise.all(
+      todo.slice(n, n + 8).map(async (i) => {
+        try {
+          const kind = i.type === "series" ? "tv" : "movie";
+          const yearParam =
+            i.year ? (kind === "tv" ? `&first_air_date_year=${i.year}` : `&year=${i.year}`) : "";
+          const r = await axios.get(
+            `https://api.themoviedb.org/3/search/${kind}?api_key=${encodeURIComponent(key)}&query=${encodeURIComponent(i.title)}${yearParam}`,
+            { signal, timeout: 8000 }
+          );
+          const hit = r.data?.results?.[0];
+          cache[i.id] = hit
+            ? {
+                poster: hit.poster_path ? IMG + hit.poster_path : undefined,
+                overview: hit.overview || undefined,
+              }
+            : null;
+        } catch {
+          // network/key error: don't cache, retry next time
+        }
+      })
+    );
+  }
+  try {
+    await kvStore.set(TMDB_CACHE, JSON.stringify(cache));
+  } catch {}
+
+  return {
+    items: lib.items.map((i) => {
+      const c = cache[i.id];
+      if (!c) return i;
+      return {
+        ...i,
+        poster: i.poster || c.poster,
+        synopsis: i.synopsis || c.overview,
+      };
+    }),
+  };
 }
