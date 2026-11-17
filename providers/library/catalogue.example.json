@@ -1,0 +1,30 @@
+{
+  "items": [
+    {
+      "id": "my-film",
+      "title": "My Film",
+      "type": "movie",
+      "year": 2021,
+      "genre": ["Drama"],
+      "synopsis": "Shown on the detail page.",
+      "poster": "http://192.168.1.10:8080/posters/my-film.jpg",
+      "url": "http://192.168.1.10:8080/movies/my-film.mp4"
+    },
+    {
+      "id": "my-show",
+      "title": "My Show",
+      "type": "series",
+      "year": 2023,
+      "genre": ["Comedy"],
+      "seasons": [
+        {
+          "number": 1,
+          "episodes": [
+            { "title": "Pilot", "url": "http://192.168.1.10:8080/shows/my-show/s01e01.mp4" },
+            { "title": "Second", "url": "http://192.168.1.10:8080/shows/my-show/s01e02.m3u8" }
+          ]
+        }
+      ]
+    }
+  ]
+}

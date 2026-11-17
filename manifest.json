@@ -15,5 +15,14 @@
     "icon": "",
     "type": "global",
     "disabled": false
+  },
+  {
+    "display_name": "Library",
+    "value": "library",
+    "version": "1.0.0",
+    "icon": "",
+    "type": "global",
+    "hasSettings": true,
+    "disabled": false
   }
 ]
